@@ -753,7 +753,7 @@ wheels = [
 [[package]]
 name = "misaki"
 version = "0.9.4"
-source = { git = "https://github.com/semidark/misaki.git?branch=main#7e36194acec84e5f7959715fabb2ba56d9b2710b" }
+source = { git = "https://github.com/semidark/misaki.git?branch=main#f8780d0e703a6a8985c3d1cca49fe9af9aaac684" }
 dependencies = [
     { name = "addict" },
     { name = "pip" },
