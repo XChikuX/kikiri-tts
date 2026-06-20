@@ -22,6 +22,7 @@ dependencies = [
     "loguru",
     "misaki[en,de]>=0.9.4",
     "numpy",
+    "soundfile",
     "torch",
     "transformers"
 ]

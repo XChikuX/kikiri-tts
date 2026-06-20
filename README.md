@@ -85,6 +85,32 @@ uv sync
 `uv sync` selects a compatible interpreter via the pinned `.python-version`
 (Python 3.12; see [Python version](docs/TRAINING_GUIDE.md#python-environment)).
 
+## Running Verification Tests
+
+To run a quick text-to-speech sanity check — e.g. after updating phonemizer
+packages like `misaki`, bumping dependencies, or making model changes — run the
+inference script with no arguments:
+
+```bash
+uv run scripts/test_inference.py
+```
+
+On first run this downloads a reference model
+([`kikiri-tts/kikiri-german-martin`](https://huggingface.co/kikiri-tts/kikiri-german-martin))
+and voicepack into a local cache (`test_output/.model_cache/`), synthesizes the
+standard German phonetic test sentences, and writes the audio to `test_output/`.
+It runs on CPU automatically when no GPU is available, so it works on any machine
+and in CI/CD pipelines. Subsequent runs reuse the cached files.
+
+To test a specific checkpoint or voice instead, pass explicit paths:
+
+```bash
+uv run scripts/test_inference.py \
+    --model voices/kokoro_german_epoch3.pth \
+    --voicepack voices/dm_daniel_epoch3.pt \
+    --device cpu
+```
+
 ## Repository Layout
 
 ```text

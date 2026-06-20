@@ -5,6 +5,9 @@ Kokoro German: Test Inference
 Tests the fine-tuned Kokoro model with a German phonetic test set.
 
 Usage:
+    # Zero-config sanity check (downloads reference model + voicepack from HF)
+    python scripts/test_inference.py
+
     # Convert checkpoint + run inference
     python scripts/test_inference.py \
         --checkpoint StyleTTS2/logs/kokoro_german/epoch_1st_00002.pth \
@@ -32,6 +35,37 @@ _repo_root = Path(__file__).resolve().parents[1]
 _kokoro_submodule = _repo_root / "kokoro"
 if _kokoro_submodule.exists() and str(_kokoro_submodule) not in sys.path:
     sys.path.insert(0, str(_kokoro_submodule))
+
+# Default reference model used for zero-config verification runs.
+# When neither --checkpoint/--model nor --voicepack is provided, the script
+# lazily downloads these from HuggingFace into a local cache directory so a
+# fresh clone can run `uv run scripts/test_inference.py` with no arguments.
+DEFAULT_REPO_ID = "kikiri-tts/kikiri-german-martin"
+DEFAULT_MODEL_FILENAME = "kikiri_german_martin_ep10.pth"
+DEFAULT_VOICE_FILENAME = "voices/martin.pt"
+MODEL_CACHE_DIR = "test_output/.model_cache"
+
+
+def download_reference_file(filename: str, cache_dir: str = MODEL_CACHE_DIR) -> str:
+    """Lazily download a reference file from the default HF repo into a cache.
+
+    Returns the local path. If the file is already cached, no download occurs.
+    """
+    from huggingface_hub import hf_hub_download
+
+    cache = Path(cache_dir)
+    cache.mkdir(parents=True, exist_ok=True)
+    resolved = cache / filename
+    if resolved.exists():
+        print(f"Using cached reference file: {resolved}")
+    else:
+        print(f"Downloading reference file from {DEFAULT_REPO_ID}: {filename}...")
+        hf_hub_download(
+            repo_id=DEFAULT_REPO_ID,
+            filename=filename,
+            local_dir=str(cache),
+        )
+    return str(resolved)
 
 # Standard German phonetic test set — covers all major pronunciation challenges
 TEST_SENTENCES = [
@@ -158,19 +192,22 @@ def main():
         description="Test fine-tuned Kokoro German model",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument(
         "--checkpoint",
         help="Path to StyleTTS2 checkpoint (.pth) — will be converted automatically",
     )
     group.add_argument(
         "--model",
-        help="Path to already-converted Kokoro-format weights (.pth)",
+        help="Path to already-converted Kokoro-format weights (.pth). "
+        f"If omitted (and no --checkpoint), downloads '{DEFAULT_MODEL_FILENAME}' "
+        f"from {DEFAULT_REPO_ID}.",
     )
     parser.add_argument(
         "--voicepack",
-        required=True,
-        help="Path to voicepack (.pt)",
+        required=False,
+        help="Path to voicepack (.pt). If omitted, downloads "
+        f"'{DEFAULT_VOICE_FILENAME}' from {DEFAULT_REPO_ID}.",
     )
     parser.add_argument(
         "--config",
@@ -191,18 +228,28 @@ def main():
 
     args = parser.parse_args()
 
-    # Convert checkpoint if needed
+    # Resolve model path: convert checkpoint, use explicit model, or
+    # fall back to the default reference model from HuggingFace.
     if args.checkpoint:
         model_path = convert_checkpoint(
             args.checkpoint,
             str(Path(args.output_dir) / "kokoro_german_converted.pth"),
         )
-    else:
+    elif args.model:
         model_path = args.model
+    else:
+        model_path = download_reference_file(DEFAULT_MODEL_FILENAME)
+
+    # Resolve voicepack path: use explicit voicepack or fall back to the
+    # default reference voicepack from HuggingFace.
+    if args.voicepack:
+        voicepack_path = args.voicepack
+    else:
+        voicepack_path = download_reference_file(DEFAULT_VOICE_FILENAME)
 
     run_inference(
         model_path=model_path,
-        voicepack_path=args.voicepack,
+        voicepack_path=voicepack_path,
         config_path=args.config,
         output_dir=args.output_dir,
         device=args.device,
