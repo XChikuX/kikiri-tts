@@ -1,5 +1,7 @@
 # kikiri-tts
 
+<img src="docs/images/kikiri-tts-logo.png" alt="kikiri-tts logo" width="150">
+
 > [!NOTE]
 > This repository was formerly named `kokoro-deutsch`. The Python package and the
 > published HuggingFace model still use the old `kokoro-deutsch` name.
